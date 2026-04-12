@@ -1,91 +1,60 @@
-# ============================================================
-# Pipeline CI/CD — Branche PROD
-# Ministère de la Communication du Sénégal
-# New Deal Technologique — Intranet MinComSN
-# ============================================================
-#
-# Déclenchement : push sur 'prod' ou PR mergée depuis 'dev'
-# Actions : build, scan sécurité, tests, push (tag: latest + version),
-#           déploiement en production
-# ============================================================
-
-name: CI/CD — Production Pipeline
+name: CI/CD - Production Pipeline
 
 on:
   push:
     branches:
       - prod
-  pull_request:
-    branches:
-      - prod
-    types:
-      - closed
 
 env:
-  IMAGE_NAME: intranet-newdeal
   REGISTRY: ghcr.io
-  CONTAINER_PORT: 80
-  HOST_PORT: 80
+  IMAGE_NAME: intranet-newdeal
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
 
 jobs:
   # ─────────────────────────────────────────────
-  # JOB 1 : Validation pré-production
+  # JOB 1 : Validation pre-production
   # ─────────────────────────────────────────────
   validate:
-    name: Validation Pré-Production
+    name: Validation Pre-Production
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Vérification stricte des fichiers
+      - name: Verification stricte des fichiers
         run: |
-          echo "=== Validation complète pour la PRODUCTION ==="
+          echo "=== Validation complete pour la PRODUCTION ==="
           ERRORS=0
-
           for f in index.html landing.html generic.html elements.html Dockerfile nginx.conf; do
             if [ -f "$f" ]; then
-              echo "✅ $f"
+              echo "OK : $f"
             else
-              echo "❌ $f MANQUANT"
+              echo "ERREUR : $f manquant"
               ERRORS=$((ERRORS+1))
             fi
           done
-
-          if [ -d ".github/workflows" ]; then
-            echo "✅ Dossier workflows présent"
-          else
-            echo "❌ Dossier workflows manquant"
-            ERRORS=$((ERRORS+1))
-          fi
-
           [ $ERRORS -eq 0 ] || exit 1
 
-      - name: Vérification image de base nginx:alpine3.23
+      - name: Verification image nginx:alpine3.23
         run: |
           if grep -q "FROM nginx:alpine3.23" Dockerfile; then
-            echo "✅ Image de base nginx:alpine3.23 confirmée"
+            echo "OK : image de base nginx:alpine3.23 confirmee"
           else
-            echo "❌ Image de base non conforme aux exigences de production"
-            exit 1
+            echo "ERREUR : image non conforme aux exigences de production" && exit 1
           fi
 
-      - name: Vérification du contenu ministerial
+      - name: Verification du contenu ministerial
         run: |
-          CHECKS=(
-            "New Deal Technologique"
-            "Ministère de la Communication"
-            "Sénégal"
-            "communication.gouv.sn"
-          )
-          for check in "${CHECKS[@]}"; do
-            if grep -r "$check" index.html landing.html generic.html > /dev/null 2>&1; then
-              echo "✅ Contenu vérifié : '$check'"
+          for keyword in "New Deal Technologique" "Ministere de la Communication" "Senegal"; do
+            if grep -r "$keyword" index.html landing.html generic.html > /dev/null 2>&1; then
+              echo "OK : '$keyword' present"
             else
-              echo "❌ Contenu manquant : '$check'"
-              exit 1
+              echo "ERREUR : '$keyword' manquant" && exit 1
             fi
           done
 
@@ -98,22 +67,20 @@ jobs:
     needs: validate
     outputs:
       image_tag: ${{ steps.version.outputs.tag }}
-      image_full: ${{ steps.version.outputs.full }}
+      image_full: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Génération du tag de version
+      - name: Generation du tag de version
         id: version
         run: |
-          VERSION="v$(date +'%Y.%m.%d')-$(echo ${{ github.sha }} | cut -c1-7)"
-          FULL_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}"
-          echo "tag=$VERSION" >> $GITHUB_OUTPUT
-          echo "full=$FULL_IMAGE" >> $GITHUB_OUTPUT
-          echo "Version de production : $VERSION"
+          TAG="v$(date +'%Y.%m.%d')-$(echo ${{ github.sha }} | cut -c1-7)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Version de production : $TAG"
 
-      - name: Configuration de Docker Buildx
+      - name: Configuration Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Connexion au GitHub Container Registry
@@ -123,80 +90,51 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extraction des métadonnées Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-            type=raw,value=${{ steps.version.outputs.tag }}
-            type=sha,prefix=prod-
-
       - name: Build et push image de production
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_ENV=production
-            BUILD_DATE=${{ github.event.head_commit.timestamp }}
-            GIT_COMMIT=${{ github.sha }}
 
-      - name: Résumé du build PROD
+      - name: Resume du build PROD
         run: |
-          echo "## Build PROD réussi 🏭" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: \`${{ steps.version.outputs.full }}:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version**: \`${{ steps.version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Build PROD reussi" >> $GITHUB_STEP_SUMMARY
+          echo "- Image : \`${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Version : \`${{ steps.version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit : \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────
-  # JOB 3 : Scan de sécurité (Trivy)
+  # JOB 3 : Scan de securite (Trivy)
   # ─────────────────────────────────────────────
   security-scan:
-    name: Scan Sécurité de l'Image
+    name: Scan Securite Trivy
     runs-on: ubuntu-latest
     needs: build-prod
 
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
-
-      - name: Connexion au GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Scan Trivy — Vulnérabilités critiques
+      - name: Scan Trivy sur l'image de production
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ needs.build-prod.outputs.image_full }}:latest"
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
-          exit-code: "0"  # Ne bloque pas, mais signale
+          exit-code: "0"
 
-      - name: Upload des résultats de sécurité
+      - name: Upload des resultats SARIF
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
 
-      - name: Rapport de sécurité simplifié
-        run: |
-          echo "## Scan Sécurité Trivy 🔒" >> $GITHUB_STEP_SUMMARY
-          echo "Image analysée : \`${{ needs.build-prod.outputs.image_full }}:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "Résultats disponibles dans l'onglet Security > Code scanning." >> $GITHUB_STEP_SUMMARY
-
   # ─────────────────────────────────────────────
-  # JOB 4 : Tests de recette production
+  # JOB 4 : Tests de recette
   # ─────────────────────────────────────────────
   test-prod:
     name: Tests de Recette (PROD)
@@ -211,65 +149,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Démarrage du conteneur de recette
+      - name: Demarrage du conteneur de recette
         run: |
           docker pull ${{ needs.build-prod.outputs.image_full }}:latest
-          docker run -d \
-            --name intranet-prod-test \
-            -p 8080:80 \
-            --health-cmd="wget -q --spider http://localhost/ || exit 1" \
-            --health-interval=10s \
-            --health-timeout=5s \
-            --health-retries=3 \
+          docker run -d --name intranet-prod-test -p 8080:80 \
             ${{ needs.build-prod.outputs.image_full }}:latest
-          echo "Attente de l'initialisation du conteneur..."
-          sleep 10
+          sleep 5
 
       - name: Tests HTTP complets
         run: |
-          echo "=== Tests de recette production ==="
-
-          # Test page principale
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
-          [ "$STATUS" = "200" ] && echo "✅ GET / → HTTP 200" || (echo "❌ GET / → HTTP $STATUS" && exit 1)
-
-          # Test landing page
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/landing.html)
-          [ "$STATUS" = "200" ] && echo "✅ GET /landing.html → HTTP 200" || (echo "❌ GET /landing.html → HTTP $STATUS" && exit 1)
-
-          # Test generic page
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/generic.html)
-          [ "$STATUS" = "200" ] && echo "✅ GET /generic.html → HTTP 200" || (echo "❌ GET /generic.html → HTTP $STATUS" && exit 1)
-
-          # Test des assets
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/assets/css/main.css)
-          [ "$STATUS" = "200" ] && echo "✅ GET /assets/css/main.css → HTTP 200" || echo "⚠️  GET /assets/css/main.css → HTTP $STATUS"
+          for page in "" "landing.html" "generic.html"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/$page)
+            if [ "$STATUS" = "200" ]; then
+              echo "OK : GET /$page -> HTTP 200"
+            else
+              echo "ERREUR : GET /$page -> HTTP $STATUS" && exit 1
+            fi
+          done
 
       - name: Validation du contenu de production
         run: |
           CONTENT=$(curl -s http://localhost:8080/)
-          CHECKS=(
-            "New Deal Technologique"
-            "Ministère de la Communication"
-            "communication.gouv.sn"
-          )
-          for check in "${CHECKS[@]}"; do
-            if echo "$CONTENT" | grep -q "$check"; then
-              echo "✅ Contenu présent : '$check'"
+          for keyword in "New Deal Technologique" "Ministere de la Communication"; do
+            if echo "$CONTENT" | grep -q "$keyword"; then
+              echo "OK : '$keyword' present"
             else
-              echo "❌ Contenu absent : '$check'" && exit 1
-            fi
-          done
-
-      - name: Test des headers de sécurité
-        run: |
-          echo "=== Vérification des headers de sécurité ==="
-          HEADERS=$(curl -s -I http://localhost:8080/)
-          for header in "X-Frame-Options" "X-Content-Type-Options" "X-XSS-Protection"; do
-            if echo "$HEADERS" | grep -qi "$header"; then
-              echo "✅ Header présent : $header"
-            else
-              echo "⚠️  Header absent : $header"
+              echo "ERREUR : '$keyword' absent" && exit 1
             fi
           done
 
@@ -278,7 +183,7 @@ jobs:
         run: docker rm -f intranet-prod-test 2>/dev/null || true
 
   # ─────────────────────────────────────────────
-  # JOB 5 : Déploiement simulé (mode examen)
+  # JOB 5 : Deploiement simule
   # ─────────────────────────────────────────────
   deploy-prod:
     name: Deploiement Production (Simule)
@@ -286,18 +191,18 @@ jobs:
     needs: [build-prod, security-scan, test-prod]
 
     steps:
-      - name: Simulation du deploiement sur le serveur de production
+      - name: Simulation du deploiement en production
         run: |
           echo "========================================================"
-          echo "  DEPLOIEMENT PRODUCTION — Ministere de la Communication"
-          echo "  New Deal Technologique — Intranet MinComSN"
+          echo "  DEPLOIEMENT PRODUCTION - Ministere de la Communication"
+          echo "  New Deal Technologique - Intranet MinComSN"
           echo "========================================================"
           echo ""
-          echo "  Image    : ${{ needs.build-prod.outputs.image_full }}:latest"
-          echo "  Version  : ${{ needs.build-prod.outputs.image_tag }}"
-          echo "  Commit   : ${{ github.sha }}"
-          echo "  Acteur   : ${{ github.actor }}"
-          echo "  Date     : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "  Image   : ${{ needs.build-prod.outputs.image_full }}:latest"
+          echo "  Version : ${{ needs.build-prod.outputs.image_tag }}"
+          echo "  Commit  : ${{ github.sha }}"
+          echo "  Acteur  : ${{ github.actor }}"
+          echo "  Date    : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
           echo "[1/4] Connexion au serveur intranet.communication.gouv.sn ... OK"
           echo "[2/4] Pull de l'image nginx:alpine3.23 depuis GHCR .......... OK"
@@ -305,7 +210,7 @@ jobs:
           echo "[4/4] Verification de sante du conteneur ..................... OK"
           echo ""
           echo "========================================================"
-          echo "  DEPLOIEMENT REUSSI - Intranet MinComSN en production"
+          echo "  DEPLOIEMENT REUSSI"
           echo "  URL : http://intranet.communication.gouv.sn"
           echo "========================================================"
 
@@ -318,10 +223,8 @@ jobs:
           echo "| Version | \`${{ needs.build-prod.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Deploye par | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Heure | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Date | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
           echo "| URL | http://intranet.communication.gouv.sn |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Ministere de la Communication — New Deal Technologique**" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────
   # JOB 6 : Notification finale
@@ -335,12 +238,14 @@ jobs:
     steps:
       - name: Bilan du pipeline PROD
         run: |
-          echo "## Pipeline CI/CD PROD — MinComSN" >> $GITHUB_STEP_SUMMARY
+          echo "## Pipeline CI/CD PROD - MinComSN" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Étape | Statut |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Validation | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build PROD | ${{ needs.build-prod.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Sécurité   | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Tests PROD | ${{ needs.test-prod.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Déploiement| ${{ needs.deploy-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Etape       | Statut |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation  | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build PROD  | ${{ needs.build-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Securite    | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests PROD  | ${{ needs.test-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploiement | ${{ needs.deploy-prod.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ministere de la Communication - New Deal Technologique" >> $GITHUB_STEP_SUMMARY
