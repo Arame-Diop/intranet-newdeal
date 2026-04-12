@@ -1,0 +1,196 @@
+# ============================================================
+# Pipeline CI/CD — Branche DEV
+# Ministère de la Communication du Sénégal
+# New Deal Technologique — Intranet MinComSN
+# ============================================================
+#
+# Déclenchement : push ou PR sur la branche 'dev'
+# Actions : build Docker, tests, push vers registry (tag: dev-latest)
+# ============================================================
+
+name: CI/CD — Dev Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+env:
+  IMAGE_NAME: intranet-newdeal
+  REGISTRY: ghcr.io
+  IMAGE_TAG_DEV: dev-latest
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1 : Lint & Validation HTML
+  # ─────────────────────────────────────────────
+  lint:
+    name: Lint & Validation HTML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Vérification de la structure des fichiers
+        run: |
+          echo "=== Vérification des fichiers HTML requis ==="
+          for f in index.html landing.html generic.html elements.html; do
+            if [ -f "$f" ]; then
+              echo "✅ $f présent"
+            else
+              echo "❌ $f manquant" && exit 1
+            fi
+          done
+
+      - name: Vérification du Dockerfile
+        run: |
+          echo "=== Validation Dockerfile ==="
+          if grep -q "nginx:alpine3.23" Dockerfile; then
+            echo "✅ Image de base correcte : nginx:alpine3.23"
+          else
+            echo "❌ Image de base incorrecte dans Dockerfile" && exit 1
+          fi
+
+      - name: Vérification du contenu MinComSN
+        run: |
+          echo "=== Vérification du contenu métier ==="
+          if grep -q "New Deal Technologique" index.html; then
+            echo "✅ Contenu New Deal Technologique présent"
+          else
+            echo "❌ Contenu ministerial manquant" && exit 1
+          fi
+
+  # ─────────────────────────────────────────────
+  # JOB 2 : Build de l'image Docker
+  # ─────────────────────────────────────────────
+  build:
+    name: Build Docker Image (DEV)
+    runs-on: ubuntu-latest
+    needs: lint
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Connexion au GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extraction des métadonnées Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=dev-latest
+            type=sha,prefix=dev-
+            type=ref,event=branch
+
+      - name: Build et push de l'image Docker
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Résumé du build
+        run: |
+          echo "## Build DEV terminé 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:dev-latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────
+  # JOB 3 : Tests de l'image construite
+  # ─────────────────────────────────────────────
+  test:
+    name: Tests Fonctionnels (DEV)
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Connexion au GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lancement du conteneur de test
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:dev-latest
+          docker run -d \
+            --name intranet-test \
+            -p 8080:80 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:dev-latest
+          sleep 5
+
+      - name: Test de disponibilité HTTP
+        run: |
+          echo "=== Test HTTP sur le conteneur ==="
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ HTTP 200 OK — Intranet accessible"
+          else
+            echo "❌ HTTP $STATUS — Intranet inaccessible" && exit 1
+          fi
+
+      - name: Test du contenu New Deal Technologique
+        run: |
+          CONTENT=$(curl -s http://localhost:8080/)
+          if echo "$CONTENT" | grep -q "New Deal Technologique"; then
+            echo "✅ Contenu MinComSN validé"
+          else
+            echo "❌ Contenu MinComSN absent de la réponse" && exit 1
+          fi
+
+      - name: Test Healthcheck Nginx
+        run: |
+          HEALTH=$(docker inspect --format='{{.State.Health.Status}}' intranet-test 2>/dev/null || echo "none")
+          echo "État du healthcheck : $HEALTH"
+
+      - name: Nettoyage du conteneur de test
+        if: always()
+        run: docker rm -f intranet-test 2>/dev/null || true
+
+  # ─────────────────────────────────────────────
+  # JOB 4 : Notification finale (DEV)
+  # ─────────────────────────────────────────────
+  notify-dev:
+    name: Notification DEV
+    runs-on: ubuntu-latest
+    needs: [lint, build, test]
+    if: always() && github.event_name == 'push'
+
+    steps:
+      - name: Résumé du pipeline DEV
+        run: |
+          echo "## Pipeline CI/CD DEV — MinComSN" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Étape | Statut |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint  | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test  | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Ministère de la Communication — New Deal Technologique**" >> $GITHUB_STEP_SUMMARY

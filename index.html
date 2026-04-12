@@ -1,16 +1,40 @@
 <!DOCTYPE HTML>
 <!--
 	Forty by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+	Adapté pour le Ministère de la Communication du Sénégal
+	New Deal Technologique
 -->
-<html>
+<html lang="fr">
 	<head>
-		<title>Forty by HTML5 UP</title>
+		<title>Intranet - Ministère de la Communication | New Deal Technologique</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<meta name="description" content="Intranet officiel du Ministère de la Communication, des Télécommunications et du Numérique du Sénégal - New Deal Technologique" />
 		<link rel="stylesheet" href="assets/css/main.css" />
 		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<style>
+			:root {
+				--color-vert:   #00853F;
+				--color-jaune:  #FDEF42;
+				--color-rouge:  #E31E24;
+			}
+			#header .logo strong { color: var(--color-vert); }
+			.banner-badge {
+				display: inline-block;
+				background: var(--color-vert);
+				color: #fff;
+				font-size: 0.75em;
+				padding: 2px 10px;
+				border-radius: 3px;
+				margin-left: 8px;
+				vertical-align: middle;
+				letter-spacing: 1px;
+				text-transform: uppercase;
+			}
+			.env-badge-prod {
+				background: var(--color-rouge);
+			}
+		</style>
 	</head>
 	<body class="is-preload">
 
@@ -19,7 +43,10 @@
 
 				<!-- Header -->
 					<header id="header" class="alt">
-						<a href="index.html" class="logo"><strong>Forty</strong> <span>by HTML5 UP</span></a>
+						<a href="index.html" class="logo">
+							<strong>MinComSN</strong>
+							<span>New Deal Technologique</span>
+						</a>
 						<nav>
 							<a href="#menu">Menu</a>
 						</nav>
@@ -28,14 +55,14 @@
 				<!-- Menu -->
 					<nav id="menu">
 						<ul class="links">
-							<li><a href="index.html">Home</a></li>
-							<li><a href="landing.html">Landing</a></li>
-							<li><a href="generic.html">Generic</a></li>
-							<li><a href="elements.html">Elements</a></li>
+							<li><a href="index.html">Accueil</a></li>
+							<li><a href="landing.html">Présentation</a></li>
+							<li><a href="generic.html">Nos Directions</a></li>
+							<li><a href="elements.html">Ressources</a></li>
 						</ul>
 						<ul class="actions stacked">
-							<li><a href="#" class="button primary fit">Get Started</a></li>
-							<li><a href="#" class="button fit">Log In</a></li>
+							<li><a href="#one" class="button primary fit">Accéder aux Services</a></li>
+							<li><a href="#contact" class="button fit">Nous Contacter</a></li>
 						</ul>
 					</nav>
 
@@ -43,13 +70,16 @@
 					<section id="banner" class="major">
 						<div class="inner">
 							<header class="major">
-								<h1>Hi, my name is Kinja FALL</h1>
+								<h1>Ministère de la Communication<br />des Télécommunications et du Numérique</h1>
 							</header>
 							<div class="content">
-								<p>A responsive site template designed by HTML5 UP<br />
-								and released for the purpose of the CI/CD démo.</p>
+								<p>
+									Bienvenue sur l'Intranet officiel du Ministère.<br />
+									Dans le cadre du <strong>New Deal Technologique</strong>, nous œuvrons pour<br />
+									la transformation numérique du Sénégal — Horizon 2050.
+								</p>
 								<ul class="actions">
-									<li><a href="#one" class="button next scrolly">Get Started</a></li>
+									<li><a href="#one" class="button next scrolly">Découvrir nos Services</a></li>
 								</ul>
 							</div>
 						</div>
@@ -58,73 +88,83 @@
 				<!-- Main -->
 					<div id="main">
 
-						<!-- One -->
+						<!-- Services / Tuiles -->
 							<section id="one" class="tiles">
 								<article>
 									<span class="image">
-										<img src="images/pic01.jpg" alt="" />
+										<img src="images/pic01.jpg" alt="Transformation Numérique" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Aliquam</a></h3>
-										<p>Ipsum dolor sit amet</p>
+										<h3><a href="landing.html" class="link">Transformation Numérique</a></h3>
+										<p>Pilotage des projets e-Gouvernement et Smart Sénégal</p>
 									</header>
 								</article>
 								<article>
 									<span class="image">
-										<img src="images/pic02.jpg" alt="" />
+										<img src="images/pic02.jpg" alt="Télécommunications" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Tempus</a></h3>
-										<p>feugiat amet tempus</p>
+										<h3><a href="landing.html" class="link">Télécommunications</a></h3>
+										<p>Régulation et développement des infrastructures télécom nationales</p>
 									</header>
 								</article>
 								<article>
 									<span class="image">
-										<img src="images/pic03.jpg" alt="" />
+										<img src="images/pic03.jpg" alt="Communication Gouvernementale" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Magna</a></h3>
-										<p>Lorem etiam nullam</p>
+										<h3><a href="generic.html" class="link">Communication Gov.</a></h3>
+										<p>Coordination de la communication institutionnelle de l'État</p>
 									</header>
 								</article>
 								<article>
 									<span class="image">
-										<img src="images/pic04.jpg" alt="" />
+										<img src="images/pic04.jpg" alt="Médias & Presse" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Ipsum</a></h3>
-										<p>Nisl sed aliquam</p>
+										<h3><a href="generic.html" class="link">Médias &amp; Presse</a></h3>
+										<p>Régulation et soutien au secteur médiatique sénégalais</p>
 									</header>
 								</article>
 								<article>
 									<span class="image">
-										<img src="images/pic05.jpg" alt="" />
+										<img src="images/pic05.jpg" alt="Innovation & Startups" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Consequat</a></h3>
-										<p>Ipsum dolor sit amet</p>
+										<h3><a href="landing.html" class="link">Innovation &amp; Startups</a></h3>
+										<p>Accompagnement des startups technologiques — Dakar Digital Hub</p>
 									</header>
 								</article>
 								<article>
 									<span class="image">
-										<img src="images/pic06.jpg" alt="" />
+										<img src="images/pic06.jpg" alt="Cybersécurité" />
 									</span>
 									<header class="major">
-										<h3><a href="landing.html" class="link">Etiam</a></h3>
-										<p>Feugiat amet tempus</p>
+										<h3><a href="landing.html" class="link">Cybersécurité</a></h3>
+										<p>Protection des infrastructures critiques et données nationales</p>
 									</header>
 								</article>
 							</section>
 
-						<!-- Two -->
+						<!-- À Propos -->
 							<section id="two">
 								<div class="inner">
 									<header class="major">
-										<h2>Massa libero</h2>
+										<h2>New Deal Technologique — Vision 2050</h2>
 									</header>
-									<p>Nullam et orci eu lorem consequat tincidunt vivamus et sagittis libero. Mauris aliquet magna magna sed nunc rhoncus pharetra. Pellentesque condimentum sem. In efficitur ligula tate urna. Maecenas laoreet massa vel lacinia pellentesque lorem ipsum dolor. Nullam et orci eu lorem consequat tincidunt. Vivamus et sagittis libero. Mauris aliquet magna magna sed nunc rhoncus amet pharetra et feugiat tempus.</p>
+									<p>
+										Le <strong>New Deal Technologique</strong> est l'ambition du Sénégal de faire du numérique
+										le levier central de son développement économique et social. Porté par le Ministère de la
+										Communication, des Télécommunications et du Numérique, ce programme stratégique vise à
+										connecter chaque citoyen, moderniser les services publics et positionner le Sénégal comme
+										hub technologique de référence en Afrique de l'Ouest.
+									</p>
+									<p>
+										Notre intranet constitue l'épine dorsale numérique de toutes les directions du Ministère,
+										garantissant fluidité, sécurité et continuité des services de l'État.
+									</p>
 									<ul class="actions">
-										<li><a href="landing.html" class="button next">Get Started</a></li>
+										<li><a href="landing.html" class="button next">En Savoir Plus</a></li>
 									</ul>
 								</div>
 							</section>
@@ -138,21 +178,21 @@
 								<form method="post" action="#">
 									<div class="fields">
 										<div class="field half">
-											<label for="name">Name</label>
-											<input type="text" name="name" id="name" />
+											<label for="name">Nom complet</label>
+											<input type="text" name="name" id="name" placeholder="Prénom NOM" />
 										</div>
 										<div class="field half">
-											<label for="email">Email</label>
-											<input type="text" name="email" id="email" />
+											<label for="email">Adresse email institutionnelle</label>
+											<input type="text" name="email" id="email" placeholder="prenom.nom@communication.gouv.sn" />
 										</div>
 										<div class="field">
 											<label for="message">Message</label>
-											<textarea name="message" id="message" rows="6"></textarea>
+											<textarea name="message" id="message" rows="6" placeholder="Votre message..."></textarea>
 										</div>
 									</div>
 									<ul class="actions">
-										<li><input type="submit" value="Send Message" class="primary" /></li>
-										<li><input type="reset" value="Clear" /></li>
+										<li><input type="submit" value="Envoyer" class="primary" /></li>
+										<li><input type="reset" value="Effacer" /></li>
 									</ul>
 								</form>
 							</section>
@@ -161,23 +201,24 @@
 									<div class="contact-method">
 										<span class="icon solid alt fa-envelope"></span>
 										<h3>Email</h3>
-										<a href="#">information@untitled.tld</a>
+										<a href="mailto:contact@communication.gouv.sn">contact@communication.gouv.sn</a>
 									</div>
 								</section>
 								<section>
 									<div class="contact-method">
 										<span class="icon solid alt fa-phone"></span>
-										<h3>Phone</h3>
-										<span>(000) 000-0000 x12387</span>
+										<h3>Téléphone</h3>
+										<span>+221 33 849 70 00</span>
 									</div>
 								</section>
 								<section>
 									<div class="contact-method">
 										<span class="icon solid alt fa-home"></span>
-										<h3>Address</h3>
-										<span>1234 Somewhere Road #5432<br />
-										Nashville, TN 00000<br />
-										United States of America</span>
+										<h3>Adresse</h3>
+										<span>
+											Avenue Léopold Sédar Senghor<br />
+											BP 4027, Dakar — Sénégal
+										</span>
 									</div>
 								</section>
 							</section>
@@ -188,14 +229,14 @@
 					<footer id="footer">
 						<div class="inner">
 							<ul class="icons">
-								<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter</span></a></li>
+								<li><a href="#" class="icon brands alt fa-twitter"><span class="label">Twitter/X</span></a></li>
 								<li><a href="#" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
-								<li><a href="#" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
-								<li><a href="#" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+								<li><a href="#" class="icon brands alt fa-youtube"><span class="label">YouTube</span></a></li>
 								<li><a href="#" class="icon brands alt fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
 							</ul>
 							<ul class="copyright">
-								<li>&copy; Untitled</li><li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+								<li>&copy; 2025 Ministère de la Communication, des Télécommunications et du Numérique — République du Sénégal</li>
+								<li>New Deal Technologique</li>
 							</ul>
 						</div>
 					</footer>
