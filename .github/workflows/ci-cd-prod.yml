@@ -40,7 +40,7 @@ jobs:
           done
           [ $ERRORS -eq 0 ] || exit 1
 
-      - name: Verification image nginx:alpine3.23
+      - name: Verification image nginx alpine3.23
         run: |
           if grep -q "FROM nginx:alpine3.23" Dockerfile; then
             echo "OK : image de base nginx:alpine3.23 confirmee"
@@ -50,7 +50,7 @@ jobs:
 
       - name: Verification du contenu ministerial
         run: |
-          for keyword in "New Deal Technologique" "Ministere de la Communication" "Senegal"; do
+          for keyword in "New Deal Technologique" "MinComSN" "communication.gouv.sn"; do
             if grep -r "$keyword" index.html landing.html generic.html > /dev/null 2>&1; then
               echo "OK : '$keyword' present"
             else
@@ -67,11 +67,15 @@ jobs:
     needs: validate
     outputs:
       image_tag: ${{ steps.version.outputs.tag }}
-      image_full: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+      image_full: ${{ env.REGISTRY }}/${{ steps.lower.outputs.owner }}/${{ env.IMAGE_NAME }}
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
+
+      - name: Conversion du nom du repo en minuscules
+        id: lower
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Generation du tag de version
         id: version
@@ -97,17 +101,17 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ steps.lower.outputs.owner }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ steps.lower.outputs.owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Resume du build PROD
         run: |
           echo "## Build PROD reussi" >> $GITHUB_STEP_SUMMARY
-          echo "- Image : \`${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Version : \`${{ steps.version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Commit : \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Image : ${{ env.REGISTRY }}/${{ steps.lower.outputs.owner }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "- Version : ${{ steps.version.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit : ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
   # ─────────────────────────────────────────────
   # JOB 3 : Scan de securite (Trivy)
@@ -118,7 +122,7 @@ jobs:
     needs: build-prod
 
     steps:
-      - name: Scan Trivy sur l'image de production
+      - name: Scan Trivy sur l image de production
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "${{ needs.build-prod.outputs.image_full }}:latest"
@@ -170,7 +174,7 @@ jobs:
       - name: Validation du contenu de production
         run: |
           CONTENT=$(curl -s http://localhost:8080/)
-          for keyword in "New Deal Technologique" "Ministere de la Communication"; do
+          for keyword in "New Deal Technologique" "MinComSN"; do
             if echo "$CONTENT" | grep -q "$keyword"; then
               echo "OK : '$keyword' present"
             else
@@ -205,7 +209,7 @@ jobs:
           echo "  Date    : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo ""
           echo "[1/4] Connexion au serveur intranet.communication.gouv.sn ... OK"
-          echo "[2/4] Pull de l'image nginx:alpine3.23 depuis GHCR .......... OK"
+          echo "[2/4] Pull de l image nginx:alpine3.23 depuis GHCR .......... OK"
           echo "[3/4] Redemarrage du conteneur intranet-prod ................. OK"
           echo "[4/4] Verification de sante du conteneur ..................... OK"
           echo ""
@@ -220,9 +224,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Parametre | Valeur |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | \`${{ needs.build-prod.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Deploye par | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ needs.build-prod.outputs.image_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deploye par | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Date | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
           echo "| URL | http://intranet.communication.gouv.sn |" >> $GITHUB_STEP_SUMMARY
 
